@@ -243,15 +243,12 @@ async def process_payload(payload: PayloadRequest):
     logger.info(f"Processing payload: {len(payload.numbers)} numbers, {len(payload.text)} characters")
     
     try:
-        # Perform analyses asynchronously where applicable
-        numeric_task = asyncio.create_task(
-            asyncio.get_event_loop().run_in_executor(None, calculate_statistics, payload.numbers)
-        )
-        text_task = asyncio.create_task(
-            asyncio.get_event_loop().run_in_executor(None, analyze_text, payload.text)
-        )
+        # Get the current event loop
+        loop = asyncio.get_running_loop()
         
-        numeric_analysis, text_analysis = await asyncio.gather(numeric_task, text_task)
+        # Perform analyses asynchronously where applicable
+        numeric_analysis = await loop.run_in_executor(None, calculate_statistics, payload.numbers)
+        text_analysis = await loop.run_in_executor(None, analyze_text, payload.text)
         
         processing_time = (time.time() - start_time) * 1000  # Convert to milliseconds
         
