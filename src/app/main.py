@@ -15,8 +15,8 @@ from typing import Dict, List, Optional, Union
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import PlainTextResponse
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
-from pydantic import BaseModel, Field, validator
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST, CollectorRegistry
+from pydantic import BaseModel, Field, field_validator
 
 # Configure structured logging
 logging.basicConfig(
@@ -25,17 +25,36 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Prometheus metrics
-REQUEST_COUNT = Counter('http_requests_total', 'Total HTTP requests', ['method', 'endpoint', 'status'])
-REQUEST_DURATION = Histogram('http_request_duration_seconds', 'HTTP request duration', ['method', 'endpoint'])
-ERROR_COUNT = Counter('http_errors_total', 'Total HTTP errors', ['endpoint', 'error_type'])
+# Create a custom registry to avoid conflicts
+registry = CollectorRegistry()
+
+# Prometheus metrics with custom registry
+REQUEST_COUNT = Counter(
+    'http_requests_total', 
+    'Total HTTP requests', 
+    ['method', 'endpoint', 'status'],
+    registry=registry
+)
+REQUEST_DURATION = Histogram(
+    'http_request_duration_seconds', 
+    'HTTP request duration', 
+    ['method', 'endpoint'],
+    registry=registry
+)
+ERROR_COUNT = Counter(
+    'http_errors_total', 
+    'Total HTTP errors', 
+    ['endpoint', 'error_type'],
+    registry=registry
+)
 
 class PayloadRequest(BaseModel):
     """Request model for payload endpoint with validation"""
     numbers: List[Union[int, float]] = Field(..., description="List of numbers for statistical analysis")
     text: str = Field(..., description="Text for analysis", min_length=1)
     
-    @validator('numbers')
+    @field_validator('numbers')
+    @classmethod
     def validate_numbers(cls, v):
         if not v:
             raise ValueError("Numbers array cannot be empty")
@@ -43,7 +62,8 @@ class PayloadRequest(BaseModel):
             raise ValueError("Numbers array too large (max 10000 items)")
         return v
     
-    @validator('text')
+    @field_validator('text')
+    @classmethod
     def validate_text(cls, v):
         if len(v) > 50000:  # Prevent DoS attacks
             raise ValueError("Text too long (max 50000 characters)")
@@ -252,7 +272,7 @@ async def process_payload(payload: PayloadRequest):
 @app.get("/metrics", response_class=PlainTextResponse)
 async def get_metrics():
     """Expose Prometheus metrics"""
-    return generate_latest()
+    return generate_latest(registry)
 
 if __name__ == "__main__":
     uvicorn.run(
