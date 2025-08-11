@@ -110,3 +110,14 @@ cd sre-microservice-assessment
    ./scripts/load-test.sh http://localhost:8000
 
 
+ **Other Consideration:**
+ Prometheus Operator + Grafana is recommended to enable colloboration on a central dashboard.
+ Full implementation details is out of the scope of the assessment. 
+
+Technology Stack Decisions:
+**Python over Go:** Development velocity and operational tooling ecosystem.
+Python's syntax and extensive standard library enable faster development cycles, crucial for SRE teams that need to iterate quickly on monitoring and operational tools. Data Analysis Ecosystem**: The `statistics` module provides production-ready implementations of statistical functions, reducing the risk of mathematical errors compared to implementing these from scratch in Go
+**FastAPI over alternatives:** Type safety, performance, and modern async support. FastAPI with Pydantic provides compile-time type checking and runtime validation, reducing production errors.
+
+**Bash over Python for scripts:** Universal availability and system integration. Bash is available in all Unix-like environments without additional installation, crucial for CI/CD pipelines and production environments.
+**Kubernetes over Nomad:** Industry standard with rich ecosystem. Kubernetes is the de facto standard with 88% market adoption, ensuring better long-term support and team familiarity.
